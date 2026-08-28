@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-08-28T07:24:37.823Z",
+  "entry": "index.html",
+  "localEntry": "NOVA-OPEN-ME.html",
+  "included": [
+    "assets",
+    "nova-v2/hero-loop.mp4",
+    "nova-v2/robot-exterior.mp4",
+    "nova-v2/arkav-assets",
+    "entry-frames",
+    "robot-afk-frames",
+    "robot-transition-frames",
+    "spell-frames",
+    "portfolio"
+  ],
+  "omitted": "Unused source videos, legacy assets, Google Fonts, and development files were omitted."
+}
