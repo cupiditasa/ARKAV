@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#102a43" />
+    <link rel="manifest" href="manifest.json" />
+    <title>کتاب‌خانه | QUICK REFERENCE HANDBOOK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="arkav-back.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">ن</span>
+          <div>
+            <strong>نوشتار</strong>
+            <small>کتابخانهٔ شخصی</small>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="منوی اصلی">
+          <button class="nav-item active" data-view="library"><span>▦</span>کتابخانه</button>
+          <button class="nav-item" data-view="support"><span>◌</span>پشتیبانی</button>
+          <button class="nav-item" data-view="license"><span>✦</span>خرید لایسنس</button>
+          <button class="nav-item" data-view="install"><span>⌁</span>نسخهٔ وب</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="secure-line"><span class="dot"></span>داده‌های شما امن است</div>
+          <button class="profile"><span class="avatar">م</span><span><b>مهمان</b><small>نسخهٔ آزمایشی</small></span><span class="chevron">⌄</span></button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="mobile-brand"><span class="brand-mark">ن</span><strong>نوشتار</strong></div>
+          <div class="top-actions">
+            <a class="back-to-arkav" href="/" aria-label="بازگشت به سایت اصلی ARKAV">بازگشت به ARKAV <span aria-hidden="true">↗</span></a>
+            <button class="icon-btn" aria-label="جستجو">⌕</button>
+            <button class="icon-btn notification" aria-label="اعلان‌ها">♢<i></i></button>
+          </div>
+        </header>
+
+        <section class="view" id="library-view">
+          <div class="welcome-row">
+            <div>
+              <p class="eyebrow">چهارشنبه، ۱۲ شهریور ۱۴۰۵</p>
+              <h1>خوش آمدید، <span>مهمان</span></h1>
+              <p class="muted">دانش شما، همیشه و همه‌جا همراه شماست.</p>
+            </div>
+            <button class="primary-btn" data-view="license">فعال‌سازی لایسنس <span>←</span></button>
+          </div>
+
+          <div class="notice">
+            <div class="notice-icon">✦</div>
+            <div><strong>نمونهٔ رایگان</strong><p>۱۰۰ صفحهٔ اول QUICK REFERENCE HANDBOOK را بدون لایسنس مطالعه کنید.</p></div>
+            <button class="text-btn" data-view="license">باز کردن همهٔ صفحات <span>←</span></button>
+          </div>
+
+          <div class="section-heading"><div><h2>کتاب‌های شما</h2><p class="muted">محتوای ذخیره‌شده در یک نگاه</p></div><span class="count">۱ عنوان</span></div>
+
+          <article class="book-row">
+            <div class="book-cover"><div class="cover-rings"></div><div class="cover-label">QUICK<br /><b>REFERENCE</b></div><span class="cover-number">QRH</span></div>
+            <div class="book-meta">
+              <div class="book-kicker">کتاب الکترونیکی · ۶۸۶ صفحه</div>
+              <h3>QUICK REFERENCE HANDBOOK</h3>
+              <p>نسخهٔ کامل و تعاملی کتاب؛ با جستجوی سریع، نشانک‌گذاری و ادامهٔ مطالعه از آخرین صفحه.</p>
+              <div class="progress-wrap"><div class="progress-label"><span>پیشرفت مطالعه</span><b>۱۲٪</b></div><div class="progress"><span style="width:12%"></span></div></div>
+            </div>
+            <div class="book-actions"><button class="read-btn" id="open-reader">ادامهٔ مطالعه <span>←</span></button><button class="more-btn" aria-label="بیشتر">•••</button></div>
+          </article>
+
+          <div class="tip"><span>⌁</span><p><b>نکته:</b> با فعال‌سازی لایسنس، محتوای کامل کتاب روی تمام دستگاه‌های شما همگام می‌شود.</p></div>
+        </section>
+        <section class="view hidden" id="install-view">
+          <div class="page-intro"><p class="eyebrow">بدون نصب از اپ‌استور</p><h1>نوشتار، <span>همیشه همراه شما.</span></h1><p class="muted">نسخهٔ وب روی موبایل و دسکتاپ اجرا می‌شود و می‌توانید آن را مثل یک اپ روی صفحهٔ اصلی ذخیره کنید.</p></div>
+          <div class="install-steps">
+            <div class="install-step"><span>۱</span><div><b>در Safari باز کنید</b><small>لینک سایت را با مرورگر Safari در iPhone یا iPad باز کنید.</small></div></div>
+            <div class="install-step"><span>۲</span><div><b>دکمهٔ اشتراک‌گذاری را بزنید</b><small>آیکون Share در نوار پایین Safari را انتخاب کنید.</small></div></div>
+            <div class="install-step"><span>۳</span><div><b>افزودن به صفحهٔ اصلی</b><small>گزینهٔ Add to Home Screen را بزنید تا نوشتار مثل اپ اجرا شود.</small></div></div>
+          </div>
+          <div class="install-note"><span>⌁</span><p><b>مزیت نسخهٔ وب:</b> به‌روزرسانی‌ها بدون دانلود نسخهٔ جدید انجام می‌شوند و پرداخت PayPing مستقیماً در مرورگر باز می‌شود.</p></div>
+        </section>
+
+        <section class="view hidden" id="support-view">
+          <div class="page-intro"><p class="eyebrow">مرکز راهنمایی</p><h1>چطور می‌توانیم <span>کمک کنیم؟</span></h1><p class="muted">پاسخ سؤال‌های رایج را پیدا کنید یا مستقیماً با ما در ارتباط باشید.</p></div>
+          <div class="support-grid"><button class="support-item"><span>↗</span><div><b>راهنمای استفاده</b><small>شروع مطالعه و امکانات برنامه</small></div><i>←</i></button><button class="support-item"><span>?</span><div><b>سؤالات متداول</b><small>پاسخ‌های کوتاه و کاربردی</small></div><i>←</i></button><button class="support-item"><span>✉</span><div><b>ارتباط با پشتیبانی</b><small>پاسخ‌گویی در کمتر از یک روز کاری</small></div><i>←</i></button></div>
+          <div class="contact-panel"><div><p class="eyebrow">پشتیبانی اختصاصی</p><h2>همراه شما هستیم.</h2><p>اگر در ورود، فعال‌سازی یا مطالعهٔ کتاب مشکلی دارید، پیام خود را برای ما ارسال کنید.</p></div><button class="primary-btn" id="contact-btn">ارسال پیام <span>←</span></button></div>
+        </section>
+
+        <section class="view hidden" id="license-view">
+          <div class="page-intro"><p class="eyebrow">دسترسی کامل</p><h1>کتاب را <span>کامل بخوانید.</span></h1><p class="muted">یک‌بار خرید کنید و برای همیشه به نسخهٔ کامل دسترسی داشته باشید.</p></div>
+          <div class="license-layout"><div class="license-main"><div class="license-price"><small>لایسنس دائمی</small><strong>۴۹۰,۰۰۰ <em>تومان</em></strong><span>پرداخت امن و فعال‌سازی آنی</span></div><ul><li>دسترسی به هر ۷۰۰ صفحهٔ کتاب</li><li>همگام‌سازی بین دستگاه‌ها</li><li>جستجو، نشانک‌گذاری و یادداشت‌گذاری</li></ul><button class="primary-btn wide" id="buy-btn">خرید و فعال‌سازی <span>←</span></button></div><div class="license-aside"><div class="mini-cover"><span>QUICK<br /><b>REFERENCE</b></span></div><p>بعد از پرداخت، کد لایسنس در همین صفحه نمایش داده می‌شود.</p></div></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="reader-overlay hidden" id="reader">
+      <div class="reader-top"><button class="close-reader" id="close-reader">×</button><div><b>QUICK REFERENCE HANDBOOK</b><small>نمونهٔ رایگان · صفحه <span id="page-num">۱</span> از ۱۰۰</small></div><button class="reader-action">⌕</button></div>
+      <div class="reader-body"><div class="pdf-page"><div class="page-watermark">QUICK REFERENCE HANDBOOK</div><p class="page-label">QRH · فصل اول</p><h2>نمونهٔ کتاب</h2><p>این بخش، پیش‌نمایش ۱۰۰ صفحهٔ اول QUICK REFERENCE HANDBOOK است.</p><div class="fake-lines"><i></i><i></i><i></i><i></i><i></i></div><div class="page-foot">QUICK REFERENCE HANDBOOK <span id="page-foot-num">۱</span></div></div></div>
+      <div class="reader-bottom"><button id="prev-page">→ صفحهٔ قبل</button><div class="page-slider"><span>۱</span><input id="page-range" type="range" min="1" max="100" value="1" /><span>۱۰۰</span></div><button id="next-page">صفحهٔ بعد ←</button></div>
+    </div>
+    <div class="toast hidden" id="toast"></div>
+    <script src="app.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+.back-to-arkav {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 14px;
+  padding: 9px 12px;
+  border: 1px solid #cbd9e8;
+  border-radius: 8px;
+  color: var(--blue);
+  background: #fff;
+  text-decoration: none;
+  font: 600 11px Vazirmatn, system-ui, sans-serif;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.back-to-arkav:hover,
+.back-to-arkav:focus-visible {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.back-to-arkav span {
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  .top-actions {
+    gap: 5px;
+  }
+
+  .back-to-arkav {
+    margin-left: 4px;
+    padding: 7px 8px;
+    font-size: 10px;
+  }
+}
