@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "taminu-zand",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-24",
+  "routes": [
+    {
+      "pattern": "arkav.ir/zand",
+      "zone_name": "arkav.ir"
+    },
+    {
+      "pattern": "arkav.ir/zand/*",
+      "zone_name": "arkav.ir"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/zand", "/zand/*"]
+  }
+}
