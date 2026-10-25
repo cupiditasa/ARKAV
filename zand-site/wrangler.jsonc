@@ -3,16 +3,15 @@
   "name": "taminu-zand",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-24",
+  "workers_dev": true,
   "routes": [
-    {
-      "pattern": "arkav.ir/zand",
-      "zone_name": "arkav.ir"
-    },
-    {
-      "pattern": "arkav.ir/zand/*",
-      "zone_name": "arkav.ir"
-    }
+    { "pattern": "arkav.ir/zand", "zone_name": "arkav.ir" },
+    { "pattern": "arkav.ir/zand/*", "zone_name": "arkav.ir" }
   ],
+  "kv_namespaces": [
+    { "binding": "PRICES", "id": "894617499cfb4c42b3f428fb4f211e78" }
+  ],
+  "triggers": { "crons": ["0 1 * * *"] },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
