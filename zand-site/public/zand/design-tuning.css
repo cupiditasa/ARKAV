@@ -79,3 +79,11 @@
   .catalog-layout{direction:rtl}
   .category-sidebar .cats,.category-sidebar .cat{direction:rtl}
 }
+
+/* Editorial grocery hero photography */
+.hero-visual{overflow:hidden;isolation:isolate;background:#183c2a!important}
+.hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:42% center;z-index:-1;filter:saturate(.92) contrast(1.03)}
+.hero-visual:before{z-index:0;pointer-events:none}
+.hero-visual:after{z-index:0;pointer-events:none}
+.hero-stamp{z-index:1}
+@media(max-width:740px){.hero-photo{object-position:42% center}}
