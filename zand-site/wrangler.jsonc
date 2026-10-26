@@ -5,6 +5,7 @@
   "compatibility_date": "2026-10-24",
   "workers_dev": true,
   "routes": [
+    { "pattern": "zandbazar.ir", "custom_domain": true },
     { "pattern": "arkav.ir/zand", "zone_name": "arkav.ir" },
     { "pattern": "arkav.ir/zand/*", "zone_name": "arkav.ir" }
   ],

@@ -5,6 +5,18 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.hostname === "zandbazar.ir" && url.pathname === "/") {
+      const assetUrl = new URL("/zand/index.html", url);
+      const page = await env.ASSETS.fetch(new Request(assetUrl, request));
+      return new HTMLRewriter()
+        .on("head", {
+          element(element) {
+            element.prepend('<base href="/zand/">', { html: true });
+          },
+        })
+        .transform(page);
+    }
+
     if (url.pathname === "/zand") {
       url.pathname = "/zand/";
       return Response.redirect(url, 308);
