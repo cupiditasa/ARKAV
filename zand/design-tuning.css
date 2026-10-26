@@ -87,3 +87,8 @@
 .hero-visual:after{z-index:0;pointer-events:none}
 .hero-stamp{z-index:1}
 @media(max-width:740px){.hero-photo{object-position:42% center}}
+
+/* Keep the photograph unobstructed and navigation legible in night mode */
+.hero-visual:before,.hero-visual:after{display:none}
+:root[data-theme="dark"] .navlinks{color:#c2d0c3}
+.navlinks a:focus-visible{outline:2px solid #d8f080;outline-offset:4px;border-radius:4px}
