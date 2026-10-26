@@ -6,7 +6,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.hostname === "zandbazar.ir" && url.pathname === "/") {
-      const assetUrl = new URL("/zand/index.html", url);
+      const assetUrl = new URL("/zand/", url);
       const page = await env.ASSETS.fetch(new Request(assetUrl, request));
       return new HTMLRewriter()
         .on("head", {
