@@ -169,7 +169,7 @@ export async function dynamicCatalog(request, env) {
 export async function currentPrices(env) {
   const snapshot=(env.PRICES && await env.PRICES.get(PRICE_DATA_KEY,"json")) || {schemaVersion:1,generatedAt:null,sources:{},items:{}};
   if(!env.DB) return {...snapshot,items:Object.fromEntries(Object.entries(snapshot.items||{}).map(([id,p])=>[id,{...p,marginPercent:10,customerPrice:finalPrice(p.sourcePrice,10)}]))};
-  const [rows,r]=await Promise.all([products(env,true),rules(env)]);
+  const [rows,r]=await Promise.all([products(env),rules(env)]);
   const items={};
   for(const p of rows) {
     if(p.deleted_at) continue;

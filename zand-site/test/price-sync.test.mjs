@@ -67,12 +67,14 @@ test("direct and billboard prices include exactly 10 percent", async () => {
     { id: "direct", name: "مستقیم", category: "تنقلات", brand: "", base_price: 1000, price_mode: "source", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://dastavval.com/?tab=order", type: "carton", is_active: 1, deleted_at: null, updated_at: updatedAt },
     { id: "billboard-ad", name: "حراج", category: "حراج عمده", brand: "", base_price: 2000, price_mode: "source", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://dastavval.com/?tab=billboard", type: "carton", is_active: 1, deleted_at: null, updated_at: updatedAt },
     { id: "manual-direct", name: "قیمت دستی", category: "تنقلات", brand: "", base_price: 3000, price_mode: "manual", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://dastavval.com/?tab=order", type: "carton", is_active: 1, deleted_at: null, updated_at: updatedAt },
-    { id: "coffee-1", name: "قهوه", category: "coffee", brand: "", base_price: 4000, price_mode: "source", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://coffeeomde.ir/product/coffee/", type: "coffee", is_active: 1, deleted_at: null, updated_at: updatedAt }
+    { id: "coffee-1", name: "قهوه", category: "coffee", brand: "", base_price: 4000, price_mode: "source", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://coffeeomde.ir/product/coffee/", type: "coffee", is_active: 1, deleted_at: null, updated_at: updatedAt },
+    { id: "inactive-direct", name: "غیرفعال", category: "تنقلات", brand: "", base_price: 5000, price_mode: "source", carton_count: 1, min_cartons: 1, description: "", image: "", source: "https://dastavval.com/?tab=order", type: "carton", is_active: 0, deleted_at: null, updated_at: updatedAt }
   ];
   const snapshot = { generatedAt: updatedAt, sources: {}, items: {
     direct: { source: "dastavval", sourcePrice: 1000, updatedAt },
     "billboard-ad": { source: "dastavval-billboard", sourcePrice: 2000, updatedAt },
-    "coffee-1": { source: "coffeeomde", sourcePrice: 4000, updatedAt }
+    "coffee-1": { source: "coffeeomde", sourcePrice: 4000, updatedAt },
+    "inactive-direct": { source: "dastavval", sourcePrice: 5000, updatedAt }
   } };
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(catalogText));
   const revision = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
@@ -84,7 +86,7 @@ test("direct and billboard prices include exactly 10 percent", async () => {
       return null;
     },
     async all() {
-      if (sql.includes("SELECT * FROM products")) return { results: products };
+      if (sql.includes("SELECT * FROM products")) return { results: sql.includes("is_active=1") ? products.filter(p => p.is_active === 1) : products };
       if (sql.includes("category_margin_rules")) return { results: [] };
       return { results: [] };
     }
@@ -103,4 +105,5 @@ test("direct and billboard prices include exactly 10 percent", async () => {
   assert.equal(prices.items["manual-direct"].marginPercent, 10);
   assert.equal(prices.items["coffee-1"].customerPrice, 4200);
   assert.equal(prices.items["coffee-1"].marginPercent, 5);
+  assert.equal(prices.items["inactive-direct"], undefined);
 });
