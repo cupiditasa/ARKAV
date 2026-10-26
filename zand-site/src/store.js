@@ -98,14 +98,36 @@ function parseCatalog(source) {
   }));
 }
 async function seed(env) {
-  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM products").first();
-  if (Number(count?.n || 0)) return;
   const asset = await env.ASSETS.fetch("https://assets.local/zand/catalog.js");
   if (!asset.ok) throw new Error("catalog_unavailable");
-  const products = parseCatalog(await asset.text()), stamp = time();
-  const statements = products.map(p => env.DB.prepare(`INSERT OR IGNORE INTO products
-    (id,name,category,brand,base_price,price_mode,carton_count,min_cartons,description,image,source,type,is_active,created_at,updated_at)
-    VALUES (?,?,?,?,?,'source',?,?,?,?,?,?,1,?,?)`).bind(p.id,p.name,p.category,p.brand,p.basePrice,p.cartonCount,p.minCartons,p.description,p.image,p.source,p.type,stamp,stamp));
+  const catalogText = await asset.text();
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(catalogText));
+  const revision = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2,"0")).join("");
+  const previous = await env.DB.prepare("SELECT value FROM settings WHERE key='catalog_revision'").first();
+  if (previous?.value === revision) return;
+  const catalog = parseCatalog(catalogText), stamp = time();
+  const existing = (await env.DB.prepare("SELECT id,name,category,brand,base_price,carton_count,min_cartons,description,image,source,price_mode,is_active,deleted_at FROM products").all()).results || [];
+  const byId = new Map(existing.map(row => [String(row.id), row]));
+  const statements = [];
+  for (const p of catalog) {
+    const current = byId.get(String(p.id));
+    if (!current) {
+      statements.push(env.DB.prepare("INSERT OR IGNORE INTO products (id,name,category,brand,base_price,price_mode,carton_count,min_cartons,description,image,source,type,is_active,created_at,updated_at) VALUES (?,?,?,?,?,'source',?,?,?,?,?,?,1,?,?)").bind(p.id,p.name,p.category,p.brand,p.basePrice,p.cartonCount,p.minCartons,p.description,p.image,p.source,p.type,stamp,stamp));
+      continue;
+    }
+    const fields = ["name","category","brand","base_price","carton_count","min_cartons","description","image","source"];
+    const next = [p.name,p.category,p.brand,p.basePrice,p.cartonCount,p.minCartons,p.description,p.image,p.source];
+    if (current.price_mode === "source" && !current.deleted_at && fields.some((key, i) => String(current[key] ?? "") !== String(next[i] ?? ""))) {
+      statements.push(env.DB.prepare("UPDATE products SET name=?,category=?,brand=?,base_price=?,carton_count=?,min_cartons=?,description=?,image=?,source=?,updated_at=? WHERE id=? AND price_mode='source' AND deleted_at IS NULL").bind(...next,stamp,p.id));
+    }
+  }
+  const currentSourceIds = new Set(catalog.filter(p => dastavvalSource(p.source)).map(p => String(p.id)));
+  for (const row of existing) {
+    if (dastavvalSource(row.source) && !currentSourceIds.has(String(row.id)) && Number(row.is_active) === 1 && row.price_mode === "source") {
+      statements.push(env.DB.prepare("UPDATE products SET is_active=0,updated_at=? WHERE id=? AND price_mode='source'").bind(stamp,row.id));
+    }
+  }
+  statements.push(env.DB.prepare("INSERT INTO settings (key,value,updated_at) VALUES ('catalog_revision',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at").bind(revision,stamp));
   for (let i=0;i<statements.length;i+=40) await env.DB.batch(statements.slice(i,i+40));
 }
 async function products(env, paused = false) {
@@ -113,10 +135,14 @@ async function products(env, paused = false) {
   const clause = paused ? "deleted_at IS NULL" : "deleted_at IS NULL AND is_active=1";
   return (await env.DB.prepare(`SELECT * FROM products WHERE ${clause} ORDER BY category,name`).all()).results || [];
 }
+function billboardId(id) { return String(id || "").startsWith("billboard-"); }
+function dastavvalSource(source) {
+  try { return /(^|\.)dastavval\.com$/i.test(new URL(source || "").hostname); } catch { return false; }
+}
 function catalogItem(p) {
   return { id:p.id,name:p.name,category:p.category,brand:p.brand || "",basePrice:p.base_price == null ? null : Number(p.base_price),
     cartonCount:Number(p.carton_count)||1,minCartons:Number(p.min_cartons)||1,description:p.description||"",
-    image:p.image||"",source:p.source||"",type:p.type === "coffee" ? "coffee" : "carton" };
+    image:p.image||"",source:p.source||"",type:p.type === "coffee" ? "coffee" : "carton",isBillboard:billboardId(p.id) };
 }
 async function rules(env) {
   const [g,c] = await Promise.all([
@@ -147,18 +173,25 @@ export async function currentPrices(env) {
   const items={};
   for(const p of rows) {
     if(p.deleted_at) continue;
-    const pct=margin(p,r);
+    const pct=dastavvalSource(p.source)?10:margin(p,r);
     if(p.price_mode==="manual" && Number(p.base_price)>0) {
       items[p.id]={source:"manual",sourcePrice:Number(p.base_price),updatedAt:p.updated_at,isManual:true,marginPercent:pct,customerPrice:finalPrice(p.base_price,pct)};
     } else if(p.price_mode==="source" && snapshot.items?.[p.id]) {
       const price=snapshot.items[p.id];
-      items[p.id]={...price,marginPercent:pct,customerPrice:finalPrice(price.sourcePrice,pct)};
+      const sourceMargin = dastavvalSource(p.source) ? 10 : pct;
+      items[p.id]={...price,marginPercent:sourceMargin,customerPrice:finalPrice(price.sourcePrice,sourceMargin)};
+    } else if (p.price_mode==="source" && Number(p.base_price)>0) {
+      const stamp=Date.parse(p.updated_at||"");
+      if (Number.isFinite(stamp) && Date.now()-stamp<=36*60*60*1000 && stamp<=Date.now()+300000) {
+        const sourceMargin=pct, source=billboardId(p.id)?"dastavval-billboard":"catalog";
+        items[p.id]={source,sourceProductId:p.id,sourcePrice:Number(p.base_price),updatedAt:p.updated_at,marginPercent:sourceMargin,customerPrice:finalPrice(p.base_price,sourceMargin)};
+      }
     }
   }
   return {...snapshot,items};
 }
 export async function syncCatalog(env) {
-  return (await products(env,true)).filter(p=>!p.deleted_at).map(catalogItem);
+  return (await products(env,true)).filter(p=>!p.deleted_at && Number(p.is_active)===1).map(catalogItem);
 }
 
 async function register(request,env) {

@@ -1,4 +1,5 @@
 const DASTAVVAL_URL = "https://dastavval.com/api/v1/dev/products";
+const DASTAVVAL_BILLBOARD_URL = "https://dastavval.com/api/v1/dev/ads";
 const COFFEEOMDE_URL = "https://coffeeomde.ir/wp-json/wc/store/products?per_page=100";
 
 export const PRICE_DATA_KEY = "latest";
@@ -9,8 +10,9 @@ export async function buildPriceSnapshot(catalogText, previous, now = new Date()
   const items = { ...(previous?.items || {}) };
   const sources = { ...(previous?.sources || {}) };
 
-  const [dastavvalResult, coffeeomdeResult] = await Promise.allSettled([
+  const [dastavvalResult, billboardResult, coffeeomdeResult] = await Promise.allSettled([
     fetchJson(DASTAVVAL_URL, fetcher),
+    fetchBillboard(DASTAVVAL_BILLBOARD_URL, fetcher),
     fetchJson(COFFEEOMDE_URL, fetcher),
   ]);
 
@@ -22,6 +24,16 @@ export async function buildPriceSnapshot(catalogText, previous, now = new Date()
     nowIso,
     expected: catalog.filter((product) => isDastavval(product)).length,
     build: (rows) => mapDastavval(catalog, rows, nowIso),
+  });
+
+  applySourceResult({
+    result: billboardResult,
+    source: "dastavval-billboard",
+    previousItems: items,
+    sources,
+    nowIso,
+    expected: catalog.filter(isBillboard).length,
+    build: (rows) => mapBillboard(catalog, rows, nowIso),
   });
 
   applySourceResult({
@@ -75,6 +87,24 @@ function applySourceResult({ result, source, previousItems, sources, nowIso, exp
   }
 }
 
+async function fetchBillboard(url, fetcher) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetcher(url, {
+      headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error("source_http_" + response.status);
+    const payload = await response.json();
+    const rows = Array.isArray(payload) ? payload : payload?.data;
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error("source_invalid_data");
+    return rows.filter(isLiveBillboardAd);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchJson(url, fetcher) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -102,8 +132,25 @@ function parseCatalog(text) {
   return catalog;
 }
 
+function isBillboard(product) {
+  return product?.isBillboard === true || String(product?.id || "").startsWith("billboard-");
+}
+
 function isDastavval(product) {
-  return product?.type !== "coffee" && /(^|\.)dastavval\.com$/i.test(new URL(product?.source || "https://invalid.local").hostname);
+  return !isBillboard(product) && product?.type !== "coffee" && /(^|\.)dastavval\.com$/i.test(new URL(product?.source || "https://invalid.local").hostname);
+}
+
+function isLiveBillboardAd(row) {
+  return row?.status === "approved" && row?.isApproved !== false && row?.isActive !== false && row?.isVerified !== false && (parseMoney(row?.wholesalePrice) || Number(row?.price) > 0) > 0;
+}
+
+function parseMoney(value) {
+  const digits = String(value ?? "")
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[^0-9]/g, "");
+  const amount = Number(digits);
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : 0;
 }
 
 function isCoffeeomde(product) {
@@ -111,6 +158,8 @@ function isCoffeeomde(product) {
 }
 
 function mapDastavval(catalog, rows, updatedAt) {
+  rows = rows.filter((row) => row.disabled !== true && Number(row.stock_quantity_cartons) > 0);
+  const byId = new Map(rows.map((row) => [String(row.id || ""), row]));
   const byImage = new Map();
   const byName = new Map();
   for (const row of rows) {
@@ -123,16 +172,21 @@ function mapDastavval(catalog, rows, updatedAt) {
   const updates = {};
   for (const product of catalog.filter(isDastavval)) {
     let row = null;
+    if (String(product.id).startsWith("dastavval-")) {
+      let sourceId = String(product.id).slice("dastavval-".length);
+      try { sourceId = decodeURIComponent(sourceId); } catch {}
+      row = byId.get(sourceId) || null;
+    }
     const imageKey = productImageKey(product.image);
     const imageCandidates = imageKey ? byImage.get(imageKey) : null;
-    if (imageCandidates?.length === 1) row = imageCandidates[0];
+    if (!row && imageCandidates?.length === 1) row = imageCandidates[0];
     if (!row) {
       const nameCandidates = byName.get(normalizeName(product.name));
       if (nameCandidates?.length === 1) row = nameCandidates[0];
     }
     if (!row || row.disabled === true) continue;
 
-    const sourcePrice = Number(row.bulk_price ?? row.price);
+    const sourcePrice = Number(row.bulk_price) > 0 ? Number(row.bulk_price) : Number(row.price);
     if (!Number.isFinite(sourcePrice) || sourcePrice <= 0) continue;
     updates[String(product.id)] = {
       source: "dastavval",
@@ -140,6 +194,20 @@ function mapDastavval(catalog, rows, updatedAt) {
       sourcePrice,
       updatedAt,
     };
+  }
+  return updates;
+}
+
+function mapBillboard(catalog, rows, updatedAt) {
+  const byId = new Map(rows.filter(isLiveBillboardAd).map((row) => [String(row.id || ""), row]));
+  const updates = {};
+  for (const product of catalog.filter(isBillboard)) {
+    const sourceId = String(product.id).slice("billboard-".length);
+    const row = byId.get(sourceId);
+    if (!row) continue;
+    const sourcePrice = parseMoney(row.wholesalePrice) || Number(row.price);
+    if (!Number.isFinite(sourcePrice) || sourcePrice <= 0) continue;
+    updates[String(product.id)] = { source: "dastavval-billboard", sourceProductId: String(row.id || ""), sourcePrice, updatedAt };
   }
   return updates;
 }
@@ -173,12 +241,9 @@ function mapCoffeeomde(catalog, rows, updatedAt) {
 function productImageKey(value) {
   if (typeof value !== "string") return "";
   let decoded = value;
-  try {
-    decoded = decodeURIComponent(value);
-  } catch {
-    // Keep the original path when it contains an invalid escape sequence.
-  }
-  return decoded.match(/(?:prd|prod)_(\d+)\.(?:webp|jpe?g|png)(?:[?#].*)?$/i)?.[1] || "";
+  try { decoded = decodeURIComponent(value); } catch { /* Keep the original path. */ }
+  const filename = decoded.split(/[/?#]/).filter(Boolean).pop() || "";
+  return filename.match(/^(.+)\.(?:webp|jpe?g|png|avif)$/i)?.[1]?.toLowerCase() || "";
 }
 
 function normalizeName(value) {
