@@ -11,6 +11,14 @@
   "kv_namespaces": [
     { "binding": "PRICES", "id": "894617499cfb4c42b3f428fb4f211e78" }
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "zandbazar-store",
+      "database_id": "75fed117-7fc2-4221-83c0-22fb76620ac6",
+      "migrations_dir": "migrations"
+    }
+  ],
   "triggers": { "crons": ["0 1 * * *"] },
   "assets": {
     "directory": "./public",

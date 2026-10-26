@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f3ed">
+  <title>حساب مشتری | بازرگانی زند</title>
+  <link rel="stylesheet" href="../panel.css">
+  <script src="../panel.js" defer></script>
+</head>
+<body data-panel="account">
+  <header class="shell mast">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">ز</span> بازرگانی زند</a>
+    <nav class="mast-links" aria-label="مسیرهای حساب"><a href="../">بازگشت به کالاها</a><a href="../admin/">ورود مدیر</a></nav>
+  </header>
+  <main class="shell">
+    <div class="intro"><div><p class="eyebrow">حساب مشتری</p><h1>سفارش‌ها و آدرس‌هایتان</h1><p>برای ساخت حساب، نام کاربری و گذرواژه بسازید؛ سپس اطلاعات تماس و نشانی خود را تکمیل کنید.</p></div></div>
+    <section id="auth-view" class="workspace">
+      <div class="tabs" role="tablist"><button class="active" data-auth-tab="login" type="button">ورود</button><button data-auth-tab="register" type="button">ساخت حساب</button></div>
+      <form id="login-form" class="form-grid">
+        <label class="field">نام کاربری<input name="username" autocomplete="username" minlength="3" maxlength="32" required></label>
+        <label class="field">گذرواژه<input name="password" type="password" autocomplete="current-password" minlength="10" required></label>
+        <div class="field full actions"><button class="button primary" type="submit" disabled>ورود</button><p id="login-status" class="status" role="status"></p></div>
+      </form>
+      <form id="register-form" class="form-grid hidden">
+        <label class="field">نام کاربری<input name="username" autocomplete="username" pattern="[A-Za-z0-9._-]{3,32}" minlength="3" maxlength="32" required><span class="hint">۳ تا ۳۲ نویسهٔ انگلیسی، عدد، نقطه، خط تیره یا زیرخط</span></label>
+        <label class="field">گذرواژه<input name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+        <label class="field">تکرار گذرواژه<input name="passwordConfirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+        <div class="field full actions"><button class="button primary" type="submit" disabled>ساخت حساب و ادامه</button><p id="register-status" class="status" role="status"></p></div>
+      </form>
+    </section>
+    <section id="profile-view" class="workspace hidden">
+      <div class="section-head"><div><h2>تکمیل اطلاعات حساب</h2><p>این مرحله برای نهایی‌شدن ثبت‌نام لازم است.</p></div><span class="tag">مرحلهٔ دوم</span></div>
+      <form id="profile-form" class="form-grid">
+        <label class="field">نام<input name="firstName" autocomplete="given-name" maxlength="60" required></label>
+        <label class="field">نام خانوادگی<input name="lastName" autocomplete="family-name" maxlength="80" required></label>
+        <label class="field full">شمارهٔ تماس<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required><span class="hint">شمارهٔ تماس باید قبلاً برای حساب دیگری ثبت نشده باشد.</span></label>
+        <div class="field full actions"><button class="button primary" type="submit" disabled>ذخیره و ورود به پنل</button><p id="profile-status" class="status" role="status"></p></div>
+      </form>
+    </section>
+    <section id="customer-view" class="workspace hidden">
+      <div class="section-head"><div><p class="eyebrow">خوش آمدید</p><h2 id="customer-name">حساب شما</h2><p id="customer-identity" class="muted"></p></div><button id="logout" class="button" type="button">خروج</button></div>
+      <div class="tabs" role="tablist"><button class="active" data-section="orders" type="button">سفارش‌ها</button><button data-section="addresses" type="button">آدرس‌ها</button><button data-section="support" type="button">پشتیبانی</button></div>
+      <section id="section-orders">
+        <div class="columns">
+          <div><div class="section-head"><div><h3>درخواست سفارش</h3><p>فهرست کالاها و تعداد درخواستی را بنویسید؛ همکاران برای تأیید با شما هماهنگ می‌کنند.</p></div></div>
+            <form id="order-form" class="form-grid">
+              <label class="field full">اقلام درخواستی<textarea name="details" maxlength="3000" placeholder="نام کالا، تعداد و توضیحات سفارش" required></textarea></label>
+              <label class="field full">نشانی ارسال<select name="addressId" id="order-address" required><option value="">ابتدا یک آدرس ثبت کنید</option></select></label>
+              <label class="field full">یادداشت<textarea name="customerNote" maxlength="1200" placeholder="توضیح تکمیلی (اختیاری)"></textarea></label>
+              <div class="field full actions"><button class="button primary" type="submit">ثبت درخواست</button><p id="order-status" class="status" role="status"></p></div>
+            </form>
+          </div>
+          <div><div class="section-head"><div><h3>پیگیری سفارش‌ها</h3><p>آخرین وضعیت و پاسخ مدیر در این بخش ثبت می‌شود.</p></div><button id="refresh-orders" class="button small" type="button">به‌روزرسانی</button></div><div id="orders-list" class="stack"></div></div>
+        </div>
+      </section>
+      <section id="section-addresses" class="hidden">
+        <div class="columns">
+          <div><div class="section-head"><div><h3 id="address-form-title">ثبت آدرس جدید</h3><p>آدرس‌ها برای سفارش‌های بعدی ذخیره می‌شوند.</p></div></div>
+            <form id="address-form" class="form-grid">
+              <input type="hidden" name="id">
+              <label class="field">عنوان آدرس<input name="label" placeholder="خانه، محل کار…" maxlength="40" required></label>
+              <label class="field">نام گیرنده<input name="recipientName" maxlength="100" required></label>
+              <label class="field">شمارهٔ گیرنده<input name="recipientPhone" type="tel" inputmode="tel" required></label>
+              <label class="field">استان<input name="province" maxlength="80" required></label>
+              <label class="field">شهر<input name="city" maxlength="80" required></label>
+              <label class="field">کدپستی ۱۰ رقمی<input name="postalCode" inputmode="numeric" maxlength="10" required></label>
+              <label class="field full">نشانی کامل<textarea name="address" maxlength="600" required></textarea></label>
+              <label class="check field full"><input name="isDefault" type="checkbox"> آدرس پیش‌فرض باشد</label>
+              <div class="field full actions"><button class="button primary" type="submit">ذخیرهٔ آدرس</button><button id="cancel-address-edit" class="button hidden" type="button">لغو ویرایش</button><p id="address-status" class="status" role="status"></p></div>
+            </form>
+          </div>
+          <div><div class="section-head"><div><h3>دفترچهٔ آدرس</h3></div></div><div id="addresses-list" class="stack"></div></div>
+        </div>
+      </section>
+      <section id="section-support" class="hidden">
+        <div class="columns">
+          <div><div class="section-head"><div><h3>پیام به پشتیبانی</h3><p>در صورت نیاز، شناسهٔ سفارش را هم انتخاب کنید.</p></div></div>
+            <form id="support-form" class="form-grid">
+              <label class="field full">موضوع<input name="subject" maxlength="120" required></label>
+              <label class="field full">سفارش مرتبط (اختیاری)<select name="orderId" id="support-order"><option value="">بدون سفارش</option></select></label>
+              <label class="field full">پیام<textarea name="message" maxlength="3000" required></textarea></label>
+              <div class="field full actions"><button class="button primary" type="submit">ارسال پیام</button><p id="support-status" class="status" role="status"></p></div>
+            </form>
+          </div>
+          <div><div class="section-head"><div><h3>گفت‌وگوها</h3></div></div><div id="threads-list" class="stack"></div></div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

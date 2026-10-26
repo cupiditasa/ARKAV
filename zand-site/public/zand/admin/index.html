@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f3ed">
+  <title>مدیریت فروشگاه | بازرگانی زند</title>
+  <link rel="stylesheet" href="../panel.css">
+  <script src="../panel.js" defer></script>
+</head>
+<body data-panel="admin">
+  <header class="shell mast">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">ز</span> مدیریت زند</a>
+    <nav class="mast-links" aria-label="مسیرهای مدیر"><a href="../">بازگشت به فروشگاه</a><a href="../account/">پنل مشتری</a></nav>
+  </header>
+  <main class="shell">
+    <div class="intro"><div><p class="eyebrow">فضای مدیریت</p><h1>کنترل فروشگاه</h1><p>محصولات، قیمت‌گذاری، سفارش‌ها و گفت‌وگوهای پشتیبانی.</p></div></div>
+    <section id="admin-auth" class="workspace">
+      <div class="tabs"><button class="active" data-admin-auth="login" type="button">ورود مدیر</button><button data-admin-auth="setup" type="button">راه‌اندازی مدیر اول</button></div>
+      <form id="admin-login-form" class="form-grid">
+        <label class="field">نام کاربری<input name="username" autocomplete="username" required></label>
+        <label class="field">گذرواژه<input name="password" type="password" autocomplete="current-password" required></label>
+        <div class="field full actions"><button class="button primary" type="submit">ورود به مدیریت</button><p id="admin-login-status" class="status" role="status"></p></div>
+      </form>
+      <form id="admin-setup-form" class="form-grid hidden">
+        <p class="hint field full">فقط برای ساخت اولین مدیر است. کلید راه‌اندازی باید از تنظیمات امن Worker دریافت شود و پس از ساخت، این مسیر بسته می‌شود.</p>
+        <label class="field full">کلید راه‌اندازی<input name="setupSecret" type="password" autocomplete="off" required></label>
+        <label class="field">نام کاربری<input name="username" pattern="[A-Za-z0-9._-]{3,32}" minlength="3" maxlength="32" required></label>
+        <label class="field">شمارهٔ تماس<input name="phone" type="tel" inputmode="tel" required></label>
+        <label class="field">نام<input name="firstName" maxlength="60" required></label>
+        <label class="field">نام خانوادگی<input name="lastName" maxlength="80" required></label>
+        <label class="field">گذرواژه<input name="password" type="password" minlength="10" maxlength="128" required></label>
+        <label class="field">تکرار گذرواژه<input name="passwordConfirm" type="password" minlength="10" maxlength="128" required></label>
+        <div class="field full actions"><button class="button primary" type="submit">ساخت مدیر</button><p id="admin-setup-status" class="status" role="status"></p></div>
+      </form>
+    </section>
+    <section id="admin-view" class="workspace hidden">
+      <div class="section-head"><div><p class="eyebrow">مدیر واردشده</p><h2 id="admin-name">پنل مدیریت</h2><p id="admin-identity" class="muted"></p></div><button id="admin-logout" class="button" type="button">خروج</button></div>
+      <div class="tabs"><button class="active" data-admin-section="products" type="button">محصولات</button><button data-admin-section="pricing" type="button">درصد سود</button><button data-admin-section="orders" type="button">سفارش‌ها</button><button data-admin-section="support" type="button">پشتیبانی</button></div>
+      <p id="admin-status" class="status" role="status"></p>
+      <section id="admin-products">
+        <div class="columns">
+          <div>
+            <div class="section-head"><div><h3 id="product-form-title">افزودن کالا</h3><p>قیمت دستی، مرجع روزانه یا استعلامی را انتخاب کنید.</p></div></div>
+            <form id="product-form" class="form-grid">
+              <input type="hidden" name="id">
+              <label class="field">نام کالا<input name="name" maxlength="180" required></label>
+              <label class="field">گروه / دسته<input name="category" maxlength="100" required></label>
+              <label class="field">برند<input name="brand" maxlength="100"></label>
+              <label class="field">نوع<select name="type"><option value="carton">کارتنی</option><option value="coffee">قهوه</option></select></label>
+              <label class="field">روش قیمت‌گذاری<select name="priceMode"><option value="source">مرجع روزانه</option><option value="manual">قیمت دستی</option><option value="quote">فقط استعلام</option></select></label>
+              <label class="field">قیمت پایه (تومان)<input name="basePrice" inputmode="numeric"></label>
+              <label class="field">تعداد در کارتن / حداقل کیلو<input name="cartonCount" type="number" min="1" value="1" required></label>
+              <label class="field">حداقل سفارش<input name="minCartons" type="number" min="1" value="1" required></label>
+              <label class="field">نشانی تصویر<input name="image" type="url" maxlength="1000"></label>
+              <label class="field">نشانی مرجع قیمت<input name="source" type="url" maxlength="1000"></label>
+              <label class="field">سود اختصاصی<select name="marginPercent"><option value="">پیروی از گروه / عمومی</option></select></label>
+              <label class="check field"><input name="isActive" type="checkbox" checked> فروش فعال باشد</label>
+              <label class="field full">توضیحات<textarea name="description" maxlength="1000"></textarea></label>
+              <div class="field full actions"><button class="button primary" type="submit">ذخیرهٔ کالا</button><button id="cancel-product-edit" class="button hidden" type="button">لغو ویرایش</button><p id="product-status" class="status" role="status"></p></div>
+            </form>
+          </div>
+          <div><div class="section-head"><div><h3>فهرست کالاها</h3><p>خاموش‌کردن موقت، کالا را از فروشگاه پنهان می‌کند.</p></div><button id="reload-admin" class="button small" type="button">تازه‌سازی</button></div><div id="products-list" class="stack"></div></div>
+        </div>
+      </section>
+      <section id="admin-pricing" class="hidden">
+        <div class="price-tools">
+          <form id="global-margin-form" class="workspace">
+            <div class="section-head"><div><h3>سود عمومی فروشگاه</h3><p>برای کالاهایی که قانون دیگری ندارند.</p></div></div>
+            <label class="field">درصد سود<select name="marginPercent"></select></label>
+            <div class="actions"><button class="button primary" type="submit">ذخیرهٔ سود عمومی</button></div><p id="global-margin-status" class="status" role="status"></p>
+          </form>
+          <form id="category-margin-form" class="workspace">
+            <div class="section-head"><div><h3>سود گروه کالا</h3><p>قانون گروه از سود عمومی و زیر سود اختصاصی محصول اعمال می‌شود.</p></div></div>
+            <label class="field">گروه<select name="category" required></select></label>
+            <label class="field">درصد سود<select name="marginPercent"></select></label>
+            <div class="actions"><button class="button primary" type="submit">ذخیرهٔ قانون گروه</button></div><p id="category-margin-status" class="status" role="status"></p>
+          </form>
+        </div>
+        <p class="hint">قیمت مشتری از قیمت پایهٔ تازه × (۱ + درصد سود ÷ ۱۰۰) محاسبه می‌شود. درصد هر کالا، سپس قانون گروه و در پایان سود عمومی اولویت دارد.</p>
+      </section>
+      <section id="admin-orders" class="hidden"><div class="section-head"><div><h3>سفارش‌های مشتریان</h3><p>تغییر وضعیت در تاریخچهٔ سفارش ثبت می‌شود.</p></div></div><div id="admin-orders-list" class="stack"></div></section>
+      <section id="admin-support" class="hidden"><div class="section-head"><div><h3>گفت‌وگوهای پشتیبانی</h3></div></div><div id="admin-support-list" class="stack"></div></section>
+    </section>
+  </main>
+</body>
+</html>
