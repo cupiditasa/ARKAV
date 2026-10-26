@@ -68,9 +68,9 @@
 @media(max-width:380px){#products .item{display:flex;min-height:0}#products .art{height:155px;min-height:155px}#products .detail{padding:12px}#products .price{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.hero-visual:before,.hero-visual:after{animation:none!important}.category-sidebar .cat b{transition:none!important}.catalog-hero:hover .hero-illustration{transform:none!important}}
 
-/* Cupiditas design pass 4: place the liquid category rail on the physical left while keeping Persian content RTL. */
+/* Cupiditas design pass 4: keep the liquid category rail on the physical right while preserving Persian RTL. */
 @media(min-width:741px){
-  .catalog-layout{direction:ltr}
+  .catalog-layout{direction:rtl}
   .catalog-layout>.category-sidebar{grid-column:1;direction:rtl}
   .catalog-layout>#products{grid-column:2;direction:rtl}
   .category-sidebar .cats,.category-sidebar .cat{direction:rtl}
