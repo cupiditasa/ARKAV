@@ -23,6 +23,6 @@
 .category-sidebar .cat:focus-visible{outline:3px solid color-mix(in srgb,var(--green) 45%,var(--lime));outline-offset:2px;z-index:2}
 .category-sidebar .cat:active{transform:none}
 @media(hover:hover){.category-sidebar .cat:not(.active):hover{transform:none;color:var(--shade)}.category-sidebar .cat:not(.active):hover .icon{transform:translateY(-3px) rotate(-2deg);box-shadow:inset 0 1px 0 #ffffffd9,0 5px 0 color-mix(in srgb,var(--tint) 38%,white),0 10px 17px #20351d18}}
-@media(max-width:740px){.category-sidebar .cats{padding-block:9px 12px;scroll-snap-type:x mandatory;scroll-padding-inline:8px}.category-sidebar .cat{scroll-snap-align:center}}
+@media(max-width:740px){.category-sidebar .cats{overflow-x:auto;overflow-y:hidden;padding-block:9px 12px;scroll-snap-type:x mandatory;scroll-padding-inline:8px}.category-sidebar .cat{scroll-snap-align:center}}
 @media(max-width:480px){.category-sidebar .head-title-row{align-items:flex-start}.category-sidebar .liquid-sound-toggle{font-size:10px;padding-inline:8px}}
 @media(prefers-reduced-motion:reduce){.category-sidebar .cat,.category-sidebar .cat .icon,.category-sidebar .liquid-sound-toggle{transition:none!important}.category-sidebar .cat:not(.active):hover .icon,.category-sidebar .liquid-sound-toggle:hover{transform:none!important}}
