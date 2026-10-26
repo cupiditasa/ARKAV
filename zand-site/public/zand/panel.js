@@ -7,6 +7,9 @@
   const date = v => { const d=new Date(v); return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short"}).format(d); };
   const statusNames = {pending:"در انتظار بررسی",confirmed:"تأیید شده",preparing:"در حال آماده‌سازی",shipped:"ارسال شده",delivered:"تحویل شده",cancelled:"لغو شده",open:"باز",answered:"پاسخ داده شد",closed:"بسته"};
   const setStatus = (el,msg,kind="") => { if(el){el.textContent=msg||"";el.className="status"+(kind?" "+kind:"");} };
+  const guestSupportKey="zandSupportGuestV1";
+  function readGuestSupport(){try{const value=JSON.parse(localStorage.getItem(guestSupportKey)||"null");return value&&/^[a-f0-9]{64}$/i.test(value.token||"")?value:null;}catch{return null;}}
+  function writeGuestSupport(value){try{localStorage.setItem(guestSupportKey,JSON.stringify(value));}catch{}}
   async function api(path, data, method) {
     const options={method:method|| (data===undefined?"GET":"POST"),credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}};
     if(data!==undefined){options.headers["Content-Type"]="application/json";options.body=JSON.stringify(data);}
@@ -53,13 +56,34 @@
       if(orderRows.some(o=>o.id===previous)) select.value=previous;
     }
     function renderThreads(threads) {
-      $("#threads-list").innerHTML=threads.length?threads.map(t=>'<article class="thread-box"><div class="row"><div><strong>'+esc(t.subject)+'</strong><p class="meta">'+date(t.updated_at)+' · '+esc(statusNames[t.status]||t.status)+'</p></div><span class="tag">'+(t.order_id?'مرتبط با سفارش':'پشتیبانی')+'</span></div>'+(t.messages||[]).map(m=>'<div class="message '+(m.role==="admin"?"admin":"")+'"><strong>'+esc(m.role==="admin"?"پشتیبانی":(m.firstName||"شما"))+'</strong><br>'+esc(m.body)+'<div class="meta">'+date(m.created_at)+'</div></div>').join("")+'</article>').join(""):'<p class="empty">پیامی ثبت نشده است.</p>';
+      $("#threads-list").innerHTML=threads.length?threads.map(t=>{
+        const messages=(t.messages||[]).map(m=>'<div class="message '+(m.role==="admin"?"admin":"")+'"><strong>'+esc(m.role==="admin"?"پشتیبانی":(m.firstName||"شما"))+'</strong><br>'+esc(m.body)+'<div class="meta">'+date(m.created_at||m.createdAt)+'</div></div>').join("");
+        const localOnly=t.localOnly?'<p class="hint">پیام ذخیره‌شده روی این دستگاه</p>':"";
+        return '<article class="thread-box"><div class="row"><div><strong>'+esc(t.subject)+'</strong><p class="meta">'+date(t.updated_at||t.updatedAt)+' · '+esc(statusNames[t.status]||t.status)+(t.source==="guest"?' · مهمان همین دستگاه':'')+'</p></div><span class="tag">'+(t.order_id?'مرتبط با سفارش':'پشتیبانی')+'</span></div>'+messages+localOnly+'<form class="support-thread-reply form-grid" data-thread="'+esc(t.id)+'" data-source="'+esc(t.source||"account")+'" data-subject="'+esc(t.subject)+'"><label class="field full">ادامهٔ گفت‌وگو<textarea name="message" maxlength="3000" required placeholder="پیام تازه…"></textarea></label><div class="field full actions"><button class="button soft" type="submit">ارسال پیام</button></div></form></article>';
+      }).join(""):'<p class="empty">پیامی ثبت نشده است.</p>';
     }
     async function refreshCustomer() {
       try {
         const [a,o,s]=await Promise.all([api("/api/me/addresses"),api("/api/me/orders"),api("/api/me/support")]);
         addressRows=a.addresses||[]; orderRows=o.orders||[];
-        await loadAddresses(); renderOrders(); renderThreads(s.threads||[]);
+        const threads=s.threads||[], guest=readGuestSupport();
+        if(guest?.token) {
+          try {
+            const r=await api("/api/support/guest",{action:"history",token:guest.token});
+            if(r.thread) {
+              guest.cachedMessages=r.thread.messages||[]; guest.threadId=r.thread.id; guest.subject=r.thread.subject;
+              guest.status=r.thread.status; guest.updated_at=r.thread.updated_at; writeGuestSupport(guest); threads.push(r.thread);
+            } else if(guest.pending?.length||guest.cachedMessages?.length) {
+              threads.push({id:guest.threadId||"guest-local",source:"guest",subject:guest.subject||"گفت‌وگوی پشتیبانی",status:guest.status||"open",
+                updated_at:guest.updated_at||new Date().toISOString(),messages:[...(guest.cachedMessages||[]),...(guest.pending||[])],localOnly:true});
+            }
+          } catch {
+            if(guest.pending?.length||guest.cachedMessages?.length) threads.push({id:guest.threadId||"guest-local",source:"guest",
+              subject:guest.subject||"گفت‌وگوی پشتیبانی",status:guest.status||"open",updated_at:guest.updated_at||new Date().toISOString(),
+              messages:[...(guest.cachedMessages||[]),...(guest.pending||[])],localOnly:true});
+          }
+        }
+        await loadAddresses(); renderOrders(); renderThreads(threads);
       } catch(e) { setStatus($("#order-status"),e.message,"error"); }
     }
     $$(".tabs [data-auth-tab]").forEach(button=>button.addEventListener("click",()=>{
@@ -108,6 +132,18 @@
       e.preventDefault();setStatus($("#support-status"),"در حال ارسال…");
       try{await api("/api/me/support",values(e.currentTarget));e.currentTarget.reset();setStatus($("#support-status"),"پیام برای پشتیبانی ارسال شد.","success");const r=await api("/api/me/support");renderThreads(r.threads||[]);}
       catch(err){setStatus($("#support-status"),err.message,"error");}
+    });
+    $("#threads-list").addEventListener("submit",async e=>{
+      const form=e.target.closest(".support-thread-reply"); if(!form)return; e.preventDefault();
+      const data=values(form), guest=readGuestSupport();
+      try {
+        if(form.dataset.source==="guest") {
+          if(!guest?.token) throw new Error("کلید گفت‌وگوی مهمان در این مرورگر پیدا نشد.");
+          await api("/api/support/guest",{action:"send",token:guest.token,firstName:guest.firstName||user.firstName,phone:guest.phone||user.phone,
+            subject:form.dataset.subject,message:data.message,clientMessageId:crypto.randomUUID()});
+        } else await api("/api/me/support/"+encodeURIComponent(form.dataset.thread),data);
+        await refreshCustomer();
+      } catch(err) { setStatus($("#support-status"),err.message,"error"); }
     });
     try { const r=await api("/api/auth/me"); user=r.user; showAccount(); if(user?.profileComplete) await refreshCustomer(); }
     catch { showAccount(); }

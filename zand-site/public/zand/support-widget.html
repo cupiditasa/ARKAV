@@ -1,0 +1,39 @@
+<div class="zand-support-widget" id="zandSupportWidget">
+  <button class="zand-support-launcher" id="zandSupportLauncher" type="button" aria-expanded="false" aria-controls="zandSupportPanel" aria-label="باز کردن پشتیبانی، تیکت و مشاوره">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 3h-1"/></svg>
+    <span>پشتیبانی، تیکت و مشاوره</span>
+  </button>
+  <section class="zand-support-panel" id="zandSupportPanel" role="dialog" aria-labelledby="zandSupportTitle" aria-modal="false" hidden>
+    <header class="zand-support-header">
+      <span class="zand-support-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/></svg></span>
+      <div><h2 id="zandSupportTitle">مرکز پشتیبانی و مشاوره</h2><p>پاسخ‌گویی مستقیم کارشناسان بازرگانی</p></div>
+      <button class="zand-support-close" id="zandSupportClose" type="button" aria-label="بستن پنجرهٔ پشتیبانی">×</button>
+    </header>
+    <div class="zand-support-shortcuts" aria-label="موضوع پیام">
+      <button type="button" data-support-topic="استعلام و خرید عمده"><b>استعلام و خرید</b><small>قیمت و حداقل سفارش</small></button>
+      <button type="button" data-support-topic="پیگیری سفارش"><b>پیگیری سفارش</b><small>وضعیت درخواست خرید</small></button>
+      <button type="button" data-support-topic="مشاوره خرید عمده"><b>مشاوره خرید</b><small>راهنمایی کارشناس فروش</small></button>
+    </div>
+    <div class="zand-support-thread-picker" id="zandSupportThreadPicker" hidden>
+      <label for="zandSupportThreadSelect">گفت‌وگوهای قبلی</label>
+      <select id="zandSupportThreadSelect" aria-label="انتخاب گفت‌وگوی قبلی"></select>
+      <button id="zandSupportNew" type="button">پیام جدید</button>
+    </div>
+    <div class="zand-support-transcript" id="zandSupportTranscript" role="log" aria-live="polite" aria-relevant="additions text"></div>
+    <form class="zand-support-form" id="zandSupportForm">
+      <div class="zand-support-guest-fields" id="zandSupportGuestFields">
+        <label>نام<input id="zandSupportName" name="firstName" maxlength="60" autocomplete="given-name" required></label>
+        <label>شمارهٔ تماس<input id="zandSupportPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required></label>
+      </div>
+      <label class="zand-support-subject">موضوع<input id="zandSupportSubject" name="subject" maxlength="120" required placeholder="مثلاً استعلام قیمت قهوه"></label>
+      <label class="zand-support-message">پیام<textarea id="zandSupportMessage" name="message" maxlength="3000" rows="3" required placeholder="پیامتان را اینجا بنویسید…"></textarea></label>
+      <div class="zand-support-actions">
+        <button class="zand-support-send" id="zandSupportSend" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-7.4 18-3.8-7.8L2 9.4 21 3Z"/><path d="M9.8 13.2 21 3"/></svg><span>ارسال پیام</span></button>
+        <a href="tel:09916745677">تماس مستقیم</a>
+        <a class="zand-support-account" href="https://zandbazar.ir/zand/account/">ورود به پنل</a>
+      </div>
+      <p class="zand-support-note" id="zandSupportNote">برای دیدن پیام‌های مهمان، همین مرورگر را نگه دارید.</p>
+      <p class="zand-support-status" id="zandSupportStatus" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+</div>

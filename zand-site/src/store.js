@@ -298,12 +298,27 @@ async function supportThreads(env,userId=null) {
   const q=userId?env.DB.prepare("SELECT * FROM support_threads WHERE user_id=? ORDER BY updated_at DESC LIMIT 100").bind(userId)
     :env.DB.prepare("SELECT t.*,u.username,u.first_name AS firstName,u.last_name AS lastName,u.phone FROM support_threads t JOIN users u ON u.id=t.user_id ORDER BY t.updated_at DESC LIMIT 100");
   const list=(await q.all()).results||[];
-  if(!list.length) return list;
-  const ids=list.map(x=>x.id), qs=ids.map(()=>"?").join(",");
-  const msgs=(await env.DB.prepare(`SELECT m.*,u.username,u.role,u.first_name AS firstName FROM support_messages m JOIN users u ON u.id=m.sender_id WHERE m.thread_id IN (${qs}) ORDER BY m.created_at`).bind(...ids).all()).results||[];
   const grouped=new Map();
-  for(const m of msgs) { if(!grouped.has(m.thread_id)) grouped.set(m.thread_id,[]); grouped.get(m.thread_id).push(m); }
-  return list.map(t=>({...t,messages:grouped.get(t.id)||[]}));
+  if(list.length) {
+    const ids=list.map(x=>x.id), qs=ids.map(()=>"?").join(",");
+    const sql="SELECT m.*,u.username,u.role,u.first_name AS firstName FROM support_messages m JOIN users u ON u.id=m.sender_id WHERE m.thread_id IN ("+qs+") ORDER BY m.created_at";
+    const msgs=(await env.DB.prepare(sql).bind(...ids).all()).results||[];
+    for(const m of msgs) { if(!grouped.has(m.thread_id)) grouped.set(m.thread_id,[]); grouped.get(m.thread_id).push(m); }
+  }
+  const guestRows=userId?[]:((await env.DB.prepare("SELECT * FROM guest_support_threads ORDER BY updated_at DESC LIMIT 100").all()).results||[]);
+  const guestGrouped=new Map();
+  if(guestRows.length) {
+    const ids=guestRows.map(x=>x.id), qs=ids.map(()=>"?").join(",");
+    const sql="SELECT * FROM guest_support_messages WHERE thread_id IN ("+qs+") ORDER BY created_at";
+    const msgs=(await env.DB.prepare(sql).bind(...ids).all()).results||[];
+    for(const m of msgs) {
+      if(!guestGrouped.has(m.thread_id)) guestGrouped.set(m.thread_id,[]);
+      guestGrouped.get(m.thread_id).push({...m,role:m.sender_role,firstName:m.sender_name,username:m.sender_name,clientMessageId:m.client_message_id});
+    }
+  }
+  const regular=list.map(t=>({...t,source:"account",messages:grouped.get(t.id)||[]}));
+  const guests=guestRows.map(t=>({...t,username:"مهمان",firstName:t.first_name,lastName:"",source:"guest",messages:guestGrouped.get(t.id)||[]}));
+  return [...regular,...guests].sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,userId?100:200);
 }
 async function createSupport(request,env,u) {
   const b=await bodyOf(request); if(!b) fail(400,"اطلاعات پیام خوانده نشد.");
@@ -317,6 +332,57 @@ async function createSupport(request,env,u) {
     env.DB.prepare("INSERT INTO support_messages (id,thread_id,sender_id,body,created_at) VALUES (?,?,?,?,?)").bind(crypto.randomUUID(),id,u.id,message,stamp),
   ]);
   return reply({id},201);
+}
+
+function publicGuestThread(thread,messages=[]) {
+  return {id:thread.id,firstName:thread.first_name,phone:thread.phone,username:"مهمان",subject:thread.subject,
+    status:thread.status,created_at:thread.created_at,updated_at:thread.updated_at,source:"guest",
+    messages:messages.map(m=>({id:m.id,clientMessageId:m.client_message_id,role:m.sender_role,firstName:m.sender_name,body:m.body,created_at:m.created_at}))};
+}
+async function guestSupport(request,env) {
+  const b=await bodyOf(request); if(!b) fail(400,"اطلاعات پیام خوانده نشد.");
+  const token=text(b.token,64).toLowerCase();
+  if(!/^[a-f0-9]{64}$/.test(token)) fail(400,"شناسهٔ گفت‌وگوی مهمان معتبر نیست.");
+  const tokenHash=await hash(token);
+  let thread=await env.DB.prepare("SELECT * FROM guest_support_threads WHERE token_hash=? LIMIT 1").bind(tokenHash).first();
+  if(b.action==="history") {
+    if(!thread) return reply({thread:null});
+    const messages=(await env.DB.prepare("SELECT * FROM guest_support_messages WHERE thread_id=? ORDER BY created_at LIMIT 300").bind(thread.id).all()).results||[];
+    return reply({thread:publicGuestThread(thread,messages)});
+  }
+  const first=text(b.firstName,60), p=phone(b.phone), message=text(b.message,3000);
+  const subject=text(b.subject||thread?.subject||"مشاوره و پشتیبانی",120);
+  if(!first||!p) fail(400,"نام و شمارهٔ تماس معتبر را وارد کنید.");
+  if(message.length<3) fail(400,"متن پیام کوتاه است.");
+  const clientMessageId=text(b.clientMessageId,80);
+  if(!/^[0-9a-f-]{36}$/i.test(clientMessageId)) fail(400,"شناسهٔ پیام معتبر نیست.");
+  const stamp=time();
+  if(!thread) {
+    const id=crypto.randomUUID();
+    await env.DB.prepare("INSERT OR IGNORE INTO guest_support_threads (id,token_hash,first_name,phone,subject,status,created_at,updated_at) VALUES (?,?,?,?,?,'open',?,?)")
+      .bind(id,tokenHash,first,p,subject,stamp,stamp).run();
+    thread=await env.DB.prepare("SELECT * FROM guest_support_threads WHERE token_hash=? LIMIT 1").bind(tokenHash).first();
+  }
+  if(!thread) fail(503,"گفت‌وگو ذخیره نشد؛ دوباره تلاش کنید.");
+  const duplicate=await env.DB.prepare("SELECT id FROM guest_support_messages WHERE thread_id=? AND client_message_id=? LIMIT 1").bind(thread.id,clientMessageId).first();
+  if(duplicate) return reply({ok:true,threadId:thread.id});
+  await env.DB.batch([
+    env.DB.prepare("UPDATE guest_support_threads SET first_name=?,phone=?,updated_at=? WHERE id=?").bind(first,p,stamp,thread.id),
+    env.DB.prepare("INSERT OR IGNORE INTO guest_support_messages (id,thread_id,sender_role,sender_name,sender_id,client_message_id,body,created_at) VALUES (?,?,'customer',?,NULL,?,?,?)")
+      .bind(crypto.randomUUID(),thread.id,first,clientMessageId,message,stamp),
+  ]);
+  return reply({ok:true,threadId:thread.id},201);
+}
+async function replyCustomerSupport(request,env,user,id) {
+  const b=await bodyOf(request); if(!b) fail(400,"متن پیام را وارد کنید.");
+  const msg=text(b.message,3000); if(msg.length<2) fail(400,"متن پیام کوتاه است.");
+  if(!await env.DB.prepare("SELECT id FROM support_threads WHERE id=? AND user_id=?").bind(id,user.id).first()) fail(404,"گفت‌وگو پیدا نشد.");
+  const stamp=time();
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO support_messages(id,thread_id,sender_id,body,created_at) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),id,user.id,msg,stamp),
+    env.DB.prepare("UPDATE support_threads SET status='open',updated_at=? WHERE id=?").bind(stamp,id),
+  ]);
+  return reply({ok:true});
 }
 
 function pct(v) { const n=Number(v); return Number.isInteger(n)&&n>=5&&n<=30?n:null; }
@@ -405,8 +471,17 @@ async function changeOrder(request,env,admin,id) {
 async function replySupport(request,env,admin,id) {
   const b=await bodyOf(request); if(!b) fail(400,"متن پاسخ را وارد کنید.");
   const msg=text(b.message,3000); if(msg.length<2) fail(400,"متن پاسخ کوتاه است.");
-  if(!await env.DB.prepare("SELECT id FROM support_threads WHERE id=?").bind(id).first()) fail(404,"گفت‌وگو پیدا نشد.");
   const stamp=time();
+  const guest=await env.DB.prepare("SELECT id FROM guest_support_threads WHERE id=?").bind(id).first();
+  if(guest) {
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO guest_support_messages(id,thread_id,sender_role,sender_name,sender_id,client_message_id,body,created_at) VALUES(?,?,'admin','پشتیبانی',?,NULL,?,?)").bind(crypto.randomUUID(),id,admin.id,msg,stamp),
+      env.DB.prepare("UPDATE guest_support_threads SET status='answered',updated_at=? WHERE id=?").bind(stamp,id),
+    ]);
+    await audit(env,admin,"support.reply","guest_support_thread",id,null,{status:"answered"});
+    return reply({ok:true});
+  }
+  if(!await env.DB.prepare("SELECT id FROM support_threads WHERE id=?").bind(id).first()) fail(404,"گفت‌وگو پیدا نشد.");
   await env.DB.batch([
     env.DB.prepare("INSERT INTO support_messages(id,thread_id,sender_id,body,created_at) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),id,admin.id,msg,stamp),
     env.DB.prepare("UPDATE support_threads SET status='answered',updated_at=? WHERE id=?").bind(stamp,id),
@@ -419,6 +494,7 @@ export async function handleApi(request,env) {
   try {
     if(!env.DB) fail(503,"پایگاه دادهٔ فروشگاه متصل نیست.");
     if(method!=="GET"&&method!=="HEAD"&&!sameOrigin(request)) fail(403,"درخواست نامعتبر است.");
+    if(path==="/api/support/guest"&&method==="POST") return await guestSupport(request,env);
     if(path==="/api/auth/register"&&method==="POST") return register(request,env);
     if(path==="/api/auth/login"&&method==="POST") return login(request,env);
     if(path==="/api/auth/logout"&&method==="POST") {
@@ -435,6 +511,8 @@ export async function handleApi(request,env) {
     if(path==="/api/me/orders"&&method==="POST") return createOrder(request,env,await auth(request,env));
     if(path==="/api/me/support"&&method==="GET") return reply({threads:await supportThreads(env,(await auth(request,env)).id)});
     if(path==="/api/me/support"&&method==="POST") return createSupport(request,env,await auth(request,env));
+    const sr=path.match(/^\/api\/me\/support\/([^/]+)$/);
+    if(sr&&method==="POST") return replyCustomerSupport(request,env,await auth(request,env),decodeURIComponent(sr[1]));
     if(path==="/api/admin/products"&&["GET","POST"].includes(method)) return productMutation(request,env,await auth(request,env,"admin"),null);
     const pm=path.match(/^\/api\/admin\/products\/([^/]+)$/);
     if(pm&&["PATCH","DELETE"].includes(method)) return productMutation(request,env,await auth(request,env,"admin"),decodeURIComponent(pm[1]));
