@@ -236,27 +236,39 @@ async function profile(request,env,u) {
   return reply({user:publicUser(updated)});
 }
 async function bootstrap(request,env) {
-  if(!env.ADMIN_SETUP_SECRET) fail(503,"کلید راه‌اندازی مدیر در تنظیمات Worker ثبت نشده است.");
-  const b=await bodyOf(request); if(!b) fail(400,"اطلاعات فرم خوانده نشد.");
-  if(!equal(await hash(b.setupSecret||""),await hash(env.ADMIN_SETUP_SECRET))) fail(403,"کلید راه‌اندازی درست نیست.");
-  const exists=await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role='admin'").first();
-  if(Number(exists?.n||0)) fail(409,"حساب مدیر اولیه قبلاً ساخته شده است.");
-  const name=username(b.username), p=phone(b.phone), first=text(b.firstName,60), last=text(b.lastName,80);
-  if(!validUsername(name)||!validPassword(b.password)||b.password!==b.passwordConfirm) fail(400,"نام کاربری یا گذرواژه معتبر نیست.");
-  if(!p||!first||!last) fail(400,"نام، نام خانوادگی و شمارهٔ تماس معتبر را وارد کنید.");
-  const salt=randomHex(16), u={id:crypto.randomUUID(),username:text(b.username,32),first_name:first,last_name:last,phone:p,role:"admin",profile_complete:1};
-  const passwordDigest=await passwordHash(b.password,salt);
-  try { await env.DB.prepare(`INSERT INTO users (id,username,username_norm,password_salt,password_hash,first_name,last_name,phone,phone_norm,role,profile_complete,created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,'admin',1,?)`).bind(u.id,u.username,name,salt,passwordDigest,first,last,p,p,time()).run(); }
-  catch(error) {
-    const message=String(error?.cause?.message||error?.message||"");
-    if(/UNIQUE constraint failed: users\.(username_norm|phone_norm)\b/i.test(message)) fail(409,"نام کاربری یا شمارهٔ تماس قبلاً ثبت شده است.");
-    if(/UNIQUE constraint failed: users\.role\b/i.test(message)) fail(409,"حساب مدیر اولیه قبلاً ساخته شده است.");
-    const knownError=message.match(/(?:UNIQUE|NOT NULL|CHECK) constraint failed(?:: [A-Za-z0-9_., ]+)?|FOREIGN KEY constraint failed|no such (?:table|column): [A-Za-z0-9_.]+/i)?.[0]||"database_error";
-    console.error(JSON.stringify({event:"admin_bootstrap_insert_error",reason:knownError}));
-    fail(500,"ساخت حساب مدیر به‌دلیل خطای پایگاه داده انجام نشد؛ دوباره تلاش کنید.");
+  let diagnosticStep="read_form";
+  try {
+    if(!env.ADMIN_SETUP_SECRET) fail(503,"کلید راه‌اندازی مدیر در تنظیمات Worker ثبت نشده است.");
+    const b=await bodyOf(request); if(!b) fail(400,"اطلاعات فرم خوانده نشد.");
+    diagnosticStep="hash_setup_secret";
+    if(!equal(await hash(b.setupSecret||""),await hash(env.ADMIN_SETUP_SECRET))) fail(403,"کلید راه‌اندازی درست نیست.");
+    diagnosticStep="read_admin_count";
+    const exists=await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role='admin'").first();
+    if(Number(exists?.n||0)) fail(409,"حساب مدیر اولیه قبلاً ساخته شده است.");
+    const name=username(b.username), p=phone(b.phone), first=text(b.firstName,60), last=text(b.lastName,80);
+    if(!validUsername(name)||!validPassword(b.password)||b.password!==b.passwordConfirm) fail(400,"نام کاربری یا گذرواژه معتبر نیست.");
+    if(!p||!first||!last) fail(400,"نام، نام خانوادگی و شمارهٔ تماس معتبر را وارد کنید.");
+    const salt=randomHex(16), u={id:crypto.randomUUID(),username:text(b.username,32),first_name:first,last_name:last,phone:p,role:"admin",profile_complete:1};
+    diagnosticStep="hash_password";
+    const passwordDigest=await passwordHash(b.password,salt);
+    diagnosticStep="insert_admin";
+    try { await env.DB.prepare(`INSERT INTO users (id,username,username_norm,password_salt,password_hash,first_name,last_name,phone,phone_norm,role,profile_complete,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,'admin',1,?)`).bind(u.id,u.username,name,salt,passwordDigest,first,last,p,p,time()).run(); }
+    catch(error) {
+      const message=String(error?.cause?.message||error?.message||"");
+      if(/UNIQUE constraint failed: users\.(username_norm|phone_norm)\b/i.test(message)) fail(409,"نام کاربری یا شمارهٔ تماس قبلاً ثبت شده است.");
+      if(/UNIQUE constraint failed: users\.role\b/i.test(message)) fail(409,"حساب مدیر اولیه قبلاً ساخته شده است.");
+      const knownError=message.match(/(?:UNIQUE|NOT NULL|CHECK) constraint failed(?:: [A-Za-z0-9_., ]+)?|FOREIGN KEY constraint failed|no such (?:table|column): [A-Za-z0-9_.]+/i)?.[0]||"database_error";
+      console.error(JSON.stringify({event:"admin_bootstrap_insert_error",reason:knownError}));
+      fail(500,"ساخت حساب مدیر به‌دلیل خطای پایگاه داده انجام نشد؛ دوباره تلاش کنید.");
+    }
+    diagnosticStep="create_session";
+    return reply({user:publicUser(u)},201,{"Set-Cookie":await newSession(u,env)});
+  } catch(error) {
+    if(error instanceof ApiError) throw error;
+    if(error&&typeof error==="object") error.diagnosticStep=diagnosticStep;
+    throw error;
   }
-  return reply({user:publicUser(u)},201,{"Set-Cookie":await newSession(u,env)});
 }
 
 async function addresses(request,env,u,id=null) {
@@ -537,7 +549,9 @@ export async function handleApi(request,env) {
     const message=String(e?.cause?.message||e?.message||"");
     const detail=message.match(/(?:UNIQUE|NOT NULL|CHECK) constraint failed(?:: [A-Za-z0-9_., ]+)?|FOREIGN KEY constraint failed|no such (?:table|column): [A-Za-z0-9_.]+/i)?.[0];
     const errorName=["Error","TypeError","RangeError","OperationError","NotSupportedError","DataError","SyntaxError"].includes(e?.name)?e.name:"unexpected_error";
-    console.error(JSON.stringify({event:"store_api_error",path,reason:detail||(/D1_ERROR/i.test(message)?"D1_ERROR":errorName)}));
+    const steps=["read_form","hash_setup_secret","read_admin_count","hash_password","insert_admin","create_session"];
+    const diagnosticStep=steps.includes(e?.diagnosticStep)?e.diagnosticStep:undefined;
+    console.error(JSON.stringify({event:"store_api_error",path,reason:detail||(/D1_ERROR/i.test(message)?"D1_ERROR":errorName),...(diagnosticStep?{step:diagnosticStep}:{})}));
     return reply({error:"انجام درخواست ممکن نشد؛ دوباره تلاش کنید."},500);
   }
 }
