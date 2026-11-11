@@ -534,7 +534,10 @@ export async function handleApi(request,env) {
     return reply({error:"مسیر پیدا نشد."},404);
   } catch(e) {
     if(e instanceof ApiError) return reply({error:e.message},e.status);
-    console.error(JSON.stringify({event:"store_api_error",path}));
+    const message=String(e?.cause?.message||e?.message||"");
+    const detail=message.match(/(?:UNIQUE|NOT NULL|CHECK) constraint failed(?:: [A-Za-z0-9_., ]+)?|FOREIGN KEY constraint failed|no such (?:table|column): [A-Za-z0-9_.]+/i)?.[0];
+    const errorName=["Error","TypeError","RangeError","OperationError","NotSupportedError","DataError","SyntaxError"].includes(e?.name)?e.name:"unexpected_error";
+    console.error(JSON.stringify({event:"store_api_error",path,reason:detail||(/D1_ERROR/i.test(message)?"D1_ERROR":errorName)}));
     return reply({error:"انجام درخواست ممکن نشد؛ دوباره تلاش کنید."},500);
   }
 }
