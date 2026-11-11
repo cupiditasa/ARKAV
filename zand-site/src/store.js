@@ -495,34 +495,34 @@ export async function handleApi(request,env) {
     if(!env.DB) fail(503,"پایگاه دادهٔ فروشگاه متصل نیست.");
     if(method!=="GET"&&method!=="HEAD"&&!sameOrigin(request)) fail(403,"درخواست نامعتبر است.");
     if(path==="/api/support/guest"&&method==="POST") return await guestSupport(request,env);
-    if(path==="/api/auth/register"&&method==="POST") return register(request,env);
-    if(path==="/api/auth/login"&&method==="POST") return login(request,env);
+    if(path==="/api/auth/register"&&method==="POST") return await register(request,env);
+    if(path==="/api/auth/login"&&method==="POST") return await login(request,env);
     if(path==="/api/auth/logout"&&method==="POST") {
       const t=cookieToken(request); if(t) await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await hash(t)).run();
       return reply({ok:true},200,{"Set-Cookie":expiredCookie});
     }
     if(path==="/api/auth/me"&&method==="GET") return reply({user:await currentUser(request,env)});
-    if(path==="/api/admin/bootstrap"&&method==="POST") return bootstrap(request,env);
-    if(path==="/api/me/profile"&&method==="PATCH") return profile(request,env,await auth(request,env,"customer",false));
-    if(path==="/api/me/addresses"&&["GET","POST"].includes(method)) return addresses(request,env,await auth(request,env),null);
+    if(path==="/api/admin/bootstrap"&&method==="POST") return await bootstrap(request,env);
+    if(path==="/api/me/profile"&&method==="PATCH") return await profile(request,env,await auth(request,env,"customer",false));
+    if(path==="/api/me/addresses"&&["GET","POST"].includes(method)) return await addresses(request,env,await auth(request,env),null);
     const am=path.match(/^\/api\/me\/addresses\/([^/]+)$/);
-    if(am&&["PATCH","DELETE"].includes(method)) return addresses(request,env,await auth(request,env),decodeURIComponent(am[1]));
+    if(am&&["PATCH","DELETE"].includes(method)) return await addresses(request,env,await auth(request,env),decodeURIComponent(am[1]));
     if(path==="/api/me/orders"&&method==="GET") return reply({orders:await orders(env,(await auth(request,env)).id)});
-    if(path==="/api/me/orders"&&method==="POST") return createOrder(request,env,await auth(request,env));
+    if(path==="/api/me/orders"&&method==="POST") return await createOrder(request,env,await auth(request,env));
     if(path==="/api/me/support"&&method==="GET") return reply({threads:await supportThreads(env,(await auth(request,env)).id)});
-    if(path==="/api/me/support"&&method==="POST") return createSupport(request,env,await auth(request,env));
+    if(path==="/api/me/support"&&method==="POST") return await createSupport(request,env,await auth(request,env));
     const sr=path.match(/^\/api\/me\/support\/([^/]+)$/);
-    if(sr&&method==="POST") return replyCustomerSupport(request,env,await auth(request,env),decodeURIComponent(sr[1]));
-    if(path==="/api/admin/products"&&["GET","POST"].includes(method)) return productMutation(request,env,await auth(request,env,"admin"),null);
+    if(sr&&method==="POST") return await replyCustomerSupport(request,env,await auth(request,env),decodeURIComponent(sr[1]));
+    if(path==="/api/admin/products"&&["GET","POST"].includes(method)) return await productMutation(request,env,await auth(request,env,"admin"),null);
     const pm=path.match(/^\/api\/admin\/products\/([^/]+)$/);
-    if(pm&&["PATCH","DELETE"].includes(method)) return productMutation(request,env,await auth(request,env,"admin"),decodeURIComponent(pm[1]));
-    if(path==="/api/admin/pricing"&&["GET","PUT"].includes(method)) return pricing(request,env,await auth(request,env,"admin"));
+    if(pm&&["PATCH","DELETE"].includes(method)) return await productMutation(request,env,await auth(request,env,"admin"),decodeURIComponent(pm[1]));
+    if(path==="/api/admin/pricing"&&["GET","PUT"].includes(method)) return await pricing(request,env,await auth(request,env,"admin"));
     if(path==="/api/admin/orders"&&method==="GET") { await auth(request,env,"admin"); return reply({orders:await orders(env)}); }
     const om=path.match(/^\/api\/admin\/orders\/([^/]+)$/);
-    if(om&&method==="PATCH") return changeOrder(request,env,await auth(request,env,"admin"),decodeURIComponent(om[1]));
+    if(om&&method==="PATCH") return await changeOrder(request,env,await auth(request,env,"admin"),decodeURIComponent(om[1]));
     if(path==="/api/admin/support"&&method==="GET") { await auth(request,env,"admin"); return reply({threads:await supportThreads(env)}); }
     const sm=path.match(/^\/api\/admin\/support\/([^/]+)$/);
-    if(sm&&method==="POST") return replySupport(request,env,await auth(request,env,"admin"),decodeURIComponent(sm[1]));
+    if(sm&&method==="POST") return await replySupport(request,env,await auth(request,env,"admin"),decodeURIComponent(sm[1]));
     return reply({error:"مسیر پیدا نشد."},404);
   } catch(e) {
     if(e instanceof ApiError) return reply({error:e.message},e.status);
