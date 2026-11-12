@@ -38,9 +38,11 @@ const hex = (v) => Array.from(v, b => b.toString(16).padStart(2, "0")).join("");
 const hexBytes = (v) => new Uint8Array((String(v).match(/.{2}/g) || []).map(b => parseInt(b, 16)));
 function randomHex(length = 32) { const b = new Uint8Array(length); crypto.getRandomValues(b); return hex(b); }
 async function hash(v) { return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(v)))); }
-async function passwordHash(password, salt) {
-  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: hexBytes(salt), iterations, hash: "SHA-256" }, key, 256);
+async function passwordHash(password, salt, onStep) {
+  onStep?.("hash_password_import_key");
+  const key = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits"]);
+  onStep?.("hash_password_derive_bits");
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: hexBytes(salt), iterations, hash: { name: "SHA-256" } }, key, 256);
   return hex(new Uint8Array(bits));
 }
 function equal(a, b) {
@@ -250,7 +252,7 @@ async function bootstrap(request,env) {
     if(!p||!first||!last) fail(400,"نام، نام خانوادگی و شمارهٔ تماس معتبر را وارد کنید.");
     const salt=randomHex(16), u={id:crypto.randomUUID(),username:text(b.username,32),first_name:first,last_name:last,phone:p,role:"admin",profile_complete:1};
     diagnosticStep="hash_password";
-    const passwordDigest=await passwordHash(b.password,salt);
+    const passwordDigest=await passwordHash(b.password,salt,step=>{diagnosticStep=step;});
     diagnosticStep="insert_admin";
     try { await env.DB.prepare(`INSERT INTO users (id,username,username_norm,password_salt,password_hash,first_name,last_name,phone,phone_norm,role,profile_complete,created_at)
       VALUES (?,?,?,?,?,?,?,?,?,'admin',1,?)`).bind(u.id,u.username,name,salt,passwordDigest,first,last,p,p,time()).run(); }
@@ -549,7 +551,7 @@ export async function handleApi(request,env) {
     const message=String(e?.cause?.message||e?.message||"");
     const detail=message.match(/(?:UNIQUE|NOT NULL|CHECK) constraint failed(?:: [A-Za-z0-9_., ]+)?|FOREIGN KEY constraint failed|no such (?:table|column): [A-Za-z0-9_.]+/i)?.[0];
     const errorName=["Error","TypeError","RangeError","OperationError","NotSupportedError","DataError","SyntaxError"].includes(e?.name)?e.name:"unexpected_error";
-    const steps=["read_form","hash_setup_secret","read_admin_count","hash_password","insert_admin","create_session"];
+    const steps=["read_form","hash_setup_secret","read_admin_count","hash_password","hash_password_import_key","hash_password_derive_bits","insert_admin","create_session"];
     const diagnosticStep=steps.includes(e?.diagnosticStep)?e.diagnosticStep:undefined;
     console.error(JSON.stringify({event:"store_api_error",path,reason:detail||(/D1_ERROR/i.test(message)?"D1_ERROR":errorName),...(diagnosticStep?{step:diagnosticStep}:{})}));
     return reply({error:"انجام درخواست ممکن نشد؛ دوباره تلاش کنید."},500);
