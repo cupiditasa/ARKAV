@@ -1,7 +1,7 @@
 import { PRICE_DATA_KEY } from "./price-sync.mjs";
 
 const enc = new TextEncoder();
-const iterations = 310000;
+const iterations = 100000; // Cloudflare Workers rejects PBKDF2 above this limit.
 const cookieName = "__Host-zand_session";
 const statuses = new Set(["pending", "confirmed", "preparing", "shipped", "delivered", "cancelled"]);
 
